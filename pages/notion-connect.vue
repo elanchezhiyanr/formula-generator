@@ -53,9 +53,9 @@ onMounted(async () => {
       status.value = `Successfully connected to Notion workspace: ${response.workspace_name || 'Unknown'}`;
       
       // Store the user ID and bot ID in local storage for future reference
-      localStorage.setItem('bot_id', response.bot_id);
-      localStorage.setItem('user_id', response.userId || 'default-user-id');
-      
+localStorage.setItem('bot_id', response.bot_id || '');
+localStorage.setItem('user_id', response.userId || 'default-user-id');
+
       // Close the window after a short delay
       setTimeout(() => {
         if (typeof window !== 'undefined') {
