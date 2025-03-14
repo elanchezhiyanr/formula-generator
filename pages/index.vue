@@ -57,7 +57,12 @@ async function loadMockData() {
 }
 
 onMounted(() => {
-  loadMockData()
+  loadMockData();
+  // Log user_id and bot_id from local storage
+  const userId = localStorage.getItem('user_id');
+  const botId = localStorage.getItem('bot_id');
+  console.log('User ID:', userId);
+  console.log('Bot ID:', botId);
 })
 
 function connectToNotion() {

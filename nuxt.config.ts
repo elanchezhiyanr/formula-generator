@@ -13,5 +13,19 @@ export default defineNuxtConfig({
      * @default "./components/ui"
      */
     componentDir: './components/ui'
+  },
+  runtimeConfig: {
+    // Server-side environment variables
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_KEY,
+    notionClientId: process.env.NOTION_CLIENT_ID,
+    notionClientSecret: process.env.NOTION_CLIENT_SECRET,
+    // Keys within public are also exposed client-side
+    public: {
+      supabaseUrl: process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      notionClientId: process.env.NOTION_CLIENT_ID,
+      notionRedirectUri: process.env.NOTION_REDIRECT_URI
+    }
   }
 })
