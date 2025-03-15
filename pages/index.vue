@@ -1,14 +1,21 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
+import { Input } from '@/components/ui/input'
 
-// Import components with explicit paths to avoid any import issues
-const Button = defineAsyncComponent(() => import('~/components/ui/button/Button.vue'))
-const Card = defineAsyncComponent(() => import('~/components/ui/card/Card.vue'))
-const CardHeader = defineAsyncComponent(() => import('~/components/ui/card/CardHeader.vue'))
-const CardTitle = defineAsyncComponent(() => import('~/components/ui/card/CardTitle.vue'))
-const CardContent = defineAsyncComponent(() => import('~/components/ui/card/CardContent.vue'))
-const Textarea = defineAsyncComponent(() => import('~/components/ui/textarea/Textarea.vue'))
-const Switch = defineAsyncComponent(() => import('~/components/ui/switch/Switch.vue'))
+// Click outside directive
+const vClickOutside = {
+  mounted(el, binding) {
+    el._clickOutside = (event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value(event)
+      }
+    }
+    document.addEventListener('click', el._clickOutside)
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el._clickOutside)
+  }
+}
 
 const isConnected = ref(false)
 const fields = ref([])
@@ -16,6 +23,15 @@ const userInput = ref('')
 const generatedFormula = ref('')
 const showFormula = ref(false)
 const isGenerated = ref(false)
+const isLoading = ref(false)
+const isSearching = ref(false)
+const databases = ref([])
+const selectedDatabaseId = ref('')
+const databaseTitle = ref('')
+const useManualInput = ref(false)
+const manualDatabaseStructure = ref('Define your database structure...')
+const searchQuery = ref('')
+const showSearchResults = ref(false)
 
 // Mock formula generation
 const mockFormulas = [
@@ -45,24 +61,109 @@ const textareaContent = computed({
 	}
 })
 
-// Load mock data from JSON file
-async function loadMockData() {
+// Fetch user's Notion databases
+async function fetchDatabases() {
 	try {
-		const response = await fetch('/mockData.json')
-		const data = await response.json()
-		fields.value = data.fields
+		isLoading.value = true;
+		const userId = localStorage.getItem('user_id');
+		if (!userId) {
+			console.error('User ID not found in local storage');
+			return;
+		}
+
+		const response = await fetch(`/api/notion-databases?userId=${userId}`);
+		const data = await response.json();
+
+		if (data.success) {
+			databases.value = data.databases;
+			console.log('Fetched databases:', databases.value);
+		} else {
+			console.error('Error fetching databases:', data.error);
+		}
 	} catch (error) {
-		console.error('Error loading mock data:', error)
+		console.error('Error fetching databases:', error);
+	} finally {
+		isLoading.value = false;
+	}
+}
+
+// Search for databases based on user input
+async function searchDatabases() {
+	if (searchQuery.value.length < 3) {
+		showSearchResults.value = false;
+		return;
+	}
+
+	isSearching.value = true;
+	showSearchResults.value = true;
+	try {
+		const userId = localStorage.getItem('user_id');
+		if (!userId) {
+			console.error('User ID not found in local storage');
+			return;
+		}
+
+		const response = await fetch(`/api/notion-search-databases?userId=${userId}&query=${encodeURIComponent(searchQuery.value)}`);
+		const data = await response.json();
+
+		if (data.success) {
+			databases.value = data.databases;
+			console.log('Search results:', databases.value);
+		} else {
+			console.error('Error searching databases:', data.error);
+		}
+	} catch (error) {
+		console.error('Error searching databases:', error);
+	} finally {
+		isSearching.value = false;
+	}
+}
+
+// Fetch database schema
+async function fetchDatabaseSchema(databaseId) {
+	if (!databaseId) return;
+	
+	try {
+		isLoading.value = true;
+		const userId = localStorage.getItem('user_id');
+		if (!userId) {
+			console.error('User ID not found');
+			return;
+		}
+
+		const response = await fetch(`/api/notion-database-schema?userId=${userId}&databaseId=${databaseId}`);
+		const data = await response.json();
+
+		if (data.success) {
+			fields.value = data.database.properties;
+			databaseTitle.value = data.database.title;
+			console.log('Fetched database schema:', fields.value);
+			// Hide search results after selection
+			showSearchResults.value = false;
+			// Clear search query after selection
+			searchQuery.value = '';
+		} else {
+			console.error('Error fetching database schema:', data.error);
+		}
+	} catch (error) {
+		console.error('Error fetching database schema:', error);
+	} finally {
+		isLoading.value = false;
 	}
 }
 
 onMounted(() => {
-	loadMockData();
-	// Log user_id and bot_id from local storage
+	// Check if user is already connected to Notion
 	const userId = localStorage.getItem('user_id');
 	const botId = localStorage.getItem('bot_id');
 	console.log('User ID:', userId);
 	console.log('Bot ID:', botId);
+
+	// If user is already connected, fetch their databases
+	if (userId && botId) {
+		isConnected.value = true;
+		fetchDatabases();
+	}
 })
 
 function connectToNotion() {
@@ -88,12 +189,15 @@ function connectToNotion() {
 				const userId = localStorage.getItem('user_id');
 				const botId = localStorage.getItem('bot_id');
 				alert(`Bot ID: ${botId || 'Not found'}, User ID: ${userId || 'Not found'}`);
+				
+				// Set the connected state and fetch databases
+				if (userId && botId) {
+					isConnected.value = true;
+					fetchDatabases();
+				}
 			}, 500);
 		}
 	}, 500);
-
-	// Set the connected state
-	isConnected.value = true;
 }
 
 function generateFormula() {
@@ -147,33 +251,133 @@ function toggleView() {
 							Connect to Notion
 						</Button>
 					</div>
-					<div v-else class="w-full overflow-y-auto max-h-[300px] sm:max-h-[400px] md:max-h-[500px] pr-2">
-						<!-- Database structure fields display -->
-						<div v-for="field in fields" :key="field.name"
-							class="mb-6 border rounded-lg p-4 hover:shadow-md transition-shadow"
-							:style="{ backgroundColor: getFieldBgColor(field.type) }">
-							<div class="flex justify-between items-center mb-1">
-								<div class="flex items-center gap-2">
-									<span
-										class="text-lg font-medium w-8 h-8 flex items-center justify-center rounded-md"
-										:class="field.bgColor || 'bg-gray-100'">
-										{{ field.icon }}
-									</span>
-									<span class="text-lg font-medium">{{ field.name }}</span>
+					<div v-else class="w-full">
+						<!-- Toggle switch for manual input -->
+						<div class="flex justify-end mb-4">
+							<div class="flex items-center space-x-2">
+								<span class="text-sm text-gray-700">Notion DB</span>
+								<Switch v-model="useManualInput" />
+								<span class="text-sm text-gray-700">Manual</span>
+							</div>
+						</div>
+
+						<!-- Manual database structure input -->
+						<div v-if="useManualInput" class="w-full">
+							<label for="manual-database-structure" class="block text-sm font-medium text-gray-700 mb-2">Define Your Database Structure</label>
+							<Textarea
+								id="manual-database-structure"
+								v-model="manualDatabaseStructure"
+								placeholder="Define your database structure..."
+								class="w-full h-[300px] sm:h-[400px] md:h-[500px]"
+							></Textarea>
+						</div>
+
+						<!-- Notion database structure section -->
+						<div v-if="!useManualInput">
+							<!-- Database search input -->
+							<div class="mb-6">
+								<label for="database-search" class="block text-sm font-medium text-gray-700 mb-2">Search a Database</label>
+								<div class="relative w-full">
+									<div class="flex items-center">
+										<Input
+											id="database-search"
+											v-model="searchQuery"
+											@input="searchDatabases"
+											@keydown.esc="showSearchResults = false"
+											placeholder="Type at least 3 characters to search..."
+											class="w-full pr-10"
+										/>
+										<div v-if="isSearching" class="absolute right-3">
+											<div class="animate-spin h-4 w-4 border-2 border-indigo-500 rounded-full border-t-transparent"></div>
+										</div>
+									</div>
+									
+									<!-- Search results dropdown with click outside handling -->
+									<div 
+										v-if="showSearchResults && searchQuery.length >= 3" 
+										class="w-full bg-white text-gray-800 shadow-md rounded-md border max-h-60 overflow-y-auto z-50 absolute mt-1 left-0 right-0"
+										v-click-outside="() => showSearchResults = false"
+									>
+										<div v-if="databases.length === 0 && !isSearching" class="p-4 text-center">
+											No databases found matching your search
+										</div>
+										<ul v-else class="py-1">
+											<li
+												v-for="db in databases"
+												:key="db.id"
+												@click="selectedDatabaseId = db.id; fetchDatabaseSchema(db.id);"
+												class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+											>
+												{{ db.title }}
+											</li>
+										</ul>
+									</div>
 								</div>
-								<span class="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
-									{{ field.type }}
-								</span>
 							</div>
 
-							<p class="text-gray-500 ml-10 mb-2">{{ field.description }}</p>
+							<!-- Database title -->
+							<h3 v-if="databaseTitle" class="text-lg font-semibold mb-4">{{ databaseTitle }}</h3>
 
-							<!-- Options for select type fields -->
-							<div v-if="field.options" class="ml-10 flex flex-wrap gap-2 mt-2">
-								<span v-for="option in field.options" :key="option.name" :class="option.color"
-									class="px-3 py-1 rounded-full text-sm">
-									{{ option.name }}
-								</span>
+							<!-- Loading indicator -->
+							<div v-if="isLoading" class="flex justify-center items-center py-10">
+								<div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+							</div>
+
+							<!-- No database selected message -->
+							<div v-else-if="!selectedDatabaseId" class="text-center py-10 text-gray-500">
+								Search and select a database to view its structure
+							</div>
+
+							<!-- Database structure fields display -->
+							<div v-else class="overflow-y-auto max-h-[300px] sm:max-h-[400px] md:max-h-[500px] pr-2">
+								<div v-for="field in fields" :key="field.id"
+									class="mb-6 border rounded-lg p-4 hover:shadow-md transition-shadow"
+									:style="{ backgroundColor: getFieldBgColor(field.type) }">
+
+								<div class="flex justify-between items-center mb-1">
+									<div class="flex items-center gap-2">
+										<span
+											class="text-lg font-medium w-8 h-8 flex items-center justify-center rounded-md"
+											:class="field.bgColor || 'bg-gray-100'">
+											{{ field.icon }}
+										</span>
+										<span class="text-lg font-medium">{{ field.name }}</span>
+									</div>
+									<span class="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
+										{{ field.type }}
+									</span>
+								</div>
+
+								<!-- Description removed as requested -->
+
+								<!-- Additional info based on property type -->
+								<!-- Options for select/multi_select/status type fields -->
+								<div v-if="field.options" class="ml-10 flex flex-wrap gap-2 mt-2">
+									<span 
+										v-for="option in field.options" 
+										:key="option.name" 
+										:class="option.color"
+										class="px-3 py-1 rounded-full text-sm border border-gray-200 bg-white text-gray-800"
+									>
+										{{ option.name }}
+									</span>
+								</div>
+
+								<!-- Formula expression -->
+								<div v-if="field.formula" class="ml-10 mt-2 p-2 bg-gray-100 rounded font-mono text-sm whitespace-nowrap overflow-x-auto">
+									{{ field.formula }}
+								</div>
+
+								<!-- Number format -->
+								<div v-if="field.format" class="ml-10 mt-2 text-sm text-gray-500">
+									Format: {{ field.format }}
+								</div>
+
+								<!-- Rollup function -->
+								<div v-if="field.rollupFunction" class="ml-10 mt-2 text-sm text-gray-500">
+									Function: {{ field.rollupFunction }}
+								</div>
+								</div>
 							</div>
 						</div>
 					</div>

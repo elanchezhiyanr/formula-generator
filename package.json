@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@notionhq/client": "^2.3.0",
     "@supabase/supabase-js": "^2.49.1",
     "@types/uuid": "^10.0.0",
     "@vueuse/core": "^13.0.0",
