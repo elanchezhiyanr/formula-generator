@@ -4,6 +4,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { XCircle } from 'lucide-vue-next'
 import { useRequirementsStore } from '~/stores/requirements'
 
 // Use the requirements store
@@ -35,12 +37,27 @@ const textareaContent = computed({
       </div>
     </CardHeader>
     <CardContent class="flex-1 flex flex-col overflow-hidden">
+      <!-- Error Alert -->
+      <Alert v-if="requirementsStore.error" variant="destructive" class="mb-4">
+        <XCircle class="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{{ requirementsStore.error }}</AlertDescription>
+      </Alert>
+
+      <!-- Loading State -->
+      <div v-if="requirementsStore.isLoading" class="flex items-center justify-center py-4">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+      </div>
+
+      <!-- Textarea -->
       <Textarea 
-        :model-value="requirementsStore.showFormula ? requirementsStore.generatedFormula : requirementsStore.userInput" 
+        v-else
+        v-model="textareaContent"
         :placeholder="requirementsStore.showFormula ? 'Generated formula will appear here...' : 'Describe what you want your formula to do...'" 
         class="flex-1 overflow-y-auto" 
         style="max-height: calc(100vh - 250px); min-height: 200px; scrollbar-width: thin;" 
         :readonly="requirementsStore.showFormula && requirementsStore.generatedFormula" 
+        @input="requirementsStore.updateUserInput($event.target.value)"
       />
     </CardContent>
   </Card>
