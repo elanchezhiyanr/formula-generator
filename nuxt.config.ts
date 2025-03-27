@@ -19,6 +19,7 @@ export default defineNuxtConfig({
     notionClientId: process.env.NOTION_CLIENT_ID,
     notionClientSecret: process.env.NOTION_CLIENT_SECRET,
 	notionRedirectUri: process.env.NOTION_REDIRECT_URI,
+	groqApiKey: process.env.GROQ_API_KEY,
     
 	// Keys within public are also exposed client-side
     public: {
