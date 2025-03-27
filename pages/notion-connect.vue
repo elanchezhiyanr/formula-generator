@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { v4 as uuidv4 } from 'uuid';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 
 // Disable the default layout for this page
 definePageMeta({
@@ -20,9 +22,6 @@ interface NotionResponse {
   error?: string;
 }
 
-// Create a button ref to handle window closing via user interaction
-// which avoids TypeScript errors with direct window access
-const closeButtonRef = ref<HTMLButtonElement | null>(null);
 const showCloseButton = ref(false);
 
 // Process the authentication on page load
@@ -86,13 +85,17 @@ const handleClose = () => {
 
 <template>
   <div class="notion-connect-container">
-    <div class="auth-card">
-      <h1>Notion Authentication</h1>
-      <div class="status-message">{{ status }}</div>
-      <div v-if="showCloseButton" class="action-buttons">
-        <button ref="closeButtonRef" @click="handleClose">Return to Home</button>
-      </div>
-    </div>
+    <Card class="auth-card">
+      <CardHeader>
+        <h1 class="text-2xl font-semibold">Notion Authentication</h1>
+      </CardHeader>
+      <CardContent>
+        <div class="status-message">{{ status }}</div>
+      </CardContent>
+      <CardFooter v-if="showCloseButton" class="justify-center">
+        <Button @click="handleClose">Return to Home</Button>
+      </CardFooter>
+    </Card>
   </div>
 </template>
 
@@ -103,23 +106,12 @@ const handleClose = () => {
   align-items: center;
   min-height: 100vh;
   background-color: #f7f7f7;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .auth-card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
   max-width: 400px;
   width: 100%;
   text-align: center;
-}
-
-h1 {
-  color: #2d3748;
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
 }
 
 .status-message {
@@ -132,24 +124,5 @@ h1 {
 
 .status-message:empty {
   display: none;
-}
-
-.action-buttons {
-  margin-top: 1rem;
-}
-
-button {
-  background-color: #0ea5e9;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s;
-}
-
-button:hover {
-  background-color: #0284c7;
 }
 </style>
