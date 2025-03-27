@@ -54,12 +54,16 @@ export default defineEventHandler(async (event) => {
 
 		// Get configuration
 		const config = useRuntimeConfig();
-		const notionClientId = config.notionClientId;
-		const notionClientSecret = config.notionClientSecret;
+		const notionClientId = config.public.notionClientId;
+		const notionClientSecret = config.public.notionClientSecret;
 		const redirectUri = config.public.notionRedirectUri;
 
 		if (!notionClientId || !notionClientSecret || !redirectUri) {
 			console.error('Missing Notion API configuration');
+			console.log('Notion Client ID:', notionClientId);
+			console.log('Notion Client Secret:', notionClientSecret);
+			console.log('Notion Redirect URI:', redirectUri);
+			console.log('Runtime Config:', config);
 			return {
 				success: false,
 				error: 'Server configuration error'

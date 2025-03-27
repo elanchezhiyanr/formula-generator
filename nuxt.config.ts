@@ -16,15 +16,15 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     // Server-side environment variables
-    notionClientId: process.env.NOTION_CLIENT_ID,
-    notionClientSecret: process.env.NOTION_CLIENT_SECRET,
-    notionRedirectUri: process.env.NOTION_REDIRECT_URI,
     groqApiKey: process.env.GROQ_API_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseAnonKey: process.env.SUPABASE_KEY,
     
     // Keys within public are also exposed client-side
     public: {
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseAnonKey: process.env.SUPABASE_KEY,
+        notionClientId: process.env.NOTION_CLIENT_ID,
+        notionClientSecret: process.env.NOTION_CLIENT_SECRET,
+        notionRedirectUri: process.env.NOTION_REDIRECT_URI
       }
   }
 })

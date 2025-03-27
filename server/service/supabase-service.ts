@@ -13,7 +13,7 @@ export const getSupabaseClient = (): SupabaseClient => {
 
 	const config = useRuntimeConfig();
 	const supabaseUrl = config.supabaseUrl;
-	const supabaseKey = config.supabaseKey;
+	const supabaseKey = config.supabaseAnonKey;
 
 	if (!supabaseUrl || !supabaseKey) {
 		throw new Error('Supabase URL and key must be provided in environment variables');

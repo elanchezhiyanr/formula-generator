@@ -75,19 +75,19 @@ export const useNotionStore = defineStore('notion', {
     },
     
     // Select a database
-    selectDatabase(databaseId: string): void {
+    async selectDatabase(databaseId: string): Promise<{ success: boolean; database?: any }> {
       this.selectedDatabaseId = databaseId
-      this.fetchDatabaseSchema(databaseId)
+      return await this.fetchDatabaseSchema(databaseId)
     },
     
     // Fetch user's Notion databases
-    async fetchDatabases(): Promise<void> {
+    async fetchDatabases(): Promise<{ success: boolean; databases?: any[] }> {
       try {
         this.isLoading = true
         const userId = localStorage.getItem('user_id')
         if (!userId) {
           console.error('User ID not found in local storage')
-          return
+          return { success: false }
         }
 
         const response = await fetch(`/api/notion-databases?userId=${userId}`)
@@ -96,21 +96,24 @@ export const useNotionStore = defineStore('notion', {
         if (data.success) {
           this.databases = data.databases
           console.log('Fetched databases:', this.databases)
+          return { success: true, databases: data.databases }
         } else {
           console.error('Error fetching databases:', data.error)
+          return { success: false }
         }
       } catch (error) {
         console.error('Error fetching databases:', error)
+        return { success: false }
       } finally {
         this.isLoading = false
       }
     },
     
     // Search for databases based on user input
-    async searchDatabases(): Promise<void> {
+    async searchDatabases(): Promise<{ success: boolean; databases?: any[] }> {
       if (this.searchQuery.length < 3) {
         this.showSearchResults = false
-        return
+        return { success: false }
       }
 
       this.isSearching = true
@@ -119,7 +122,7 @@ export const useNotionStore = defineStore('notion', {
         const userId = localStorage.getItem('user_id')
         if (!userId) {
           console.error('User ID not found in local storage')
-          return
+          return { success: false }
         }
 
         const response = await fetch(`/api/notion-search-databases?userId=${userId}&query=${encodeURIComponent(this.searchQuery)}`)
@@ -128,26 +131,29 @@ export const useNotionStore = defineStore('notion', {
         if (data.success) {
           this.databases = data.databases
           console.log('Search results:', this.databases)
+          return { success: true, databases: data.databases }
         } else {
           console.error('Error searching databases:', data.error)
+          return { success: false }
         }
       } catch (error) {
         console.error('Error searching databases:', error)
+        return { success: false }
       } finally {
         this.isSearching = false
       }
     },
     
     // Fetch database schema
-    async fetchDatabaseSchema(databaseId: string): Promise<void> {
-      if (!databaseId) return
+    async fetchDatabaseSchema(databaseId: string): Promise<{ success: boolean; database?: any }> {
+      if (!databaseId) return { success: false }
       
       try {
         this.isLoading = true
         const userId = localStorage.getItem('user_id')
         if (!userId) {
           console.error('User ID not found')
-          return
+          return { success: false }
         }
 
         const response = await fetch(`/api/notion-database-schema?userId=${userId}&databaseId=${databaseId}`)
@@ -161,18 +167,21 @@ export const useNotionStore = defineStore('notion', {
           this.showSearchResults = false
           // Clear search query after selection
           this.searchQuery = ''
+          return { success: true, database: data.database }
         } else {
           console.error('Error fetching database schema:', data.error)
+          return { success: false }
         }
       } catch (error) {
         console.error('Error fetching database schema:', error)
+        return { success: false }
       } finally {
         this.isLoading = false
       }
     },
     
     // Connect to Notion
-    connectToNotion(): void {
+    connectToNotion(): Promise<{ success: boolean; databases?: any[] }> {
       const config = useRuntimeConfig().public
       
       // Get the client ID from the runtime config
@@ -181,36 +190,42 @@ export const useNotionStore = defineStore('notion', {
       // Construct the Notion OAuth URL dynamically
       const authUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${notionClientId}&response_type=code&owner=user`
       
-      // Open the URL in a popup
-      const popup = window.open(authUrl, 'NotionAuthPopup', 'width=600,height=700')
-      
-      if (!popup) {
-        console.error('Failed to open popup')
-        return
-      }
-      
-      // Set up a polling interval to check if the popup is closed
-      const pollTimer = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(pollTimer)
-          // After popup is closed, wait a moment for localStorage to be updated
-          setTimeout(() => {
-            const userId = localStorage.getItem('user_id')
-            const botId = localStorage.getItem('bot_id')
-            alert(`Bot ID: ${botId || 'Not found'}, User ID: ${userId || 'Not found'}`)
-            
-            // Set the connected state and fetch databases
-            if (userId && botId) {
-              this.isConnected = true
-              this.fetchDatabases()
-            }
-          }, 500)
+      return new Promise((resolve) => {
+        // Open the URL in a popup
+        const popup = window.open(authUrl, 'NotionAuthPopup', 'width=600,height=700')
+        
+        if (!popup) {
+          console.error('Failed to open popup')
+          resolve({ success: false })
+          return
         }
-      }, 500)
+        
+        // Set up a polling interval to check if the popup is closed
+        const pollTimer = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(pollTimer)
+            // After popup is closed, wait a moment for localStorage to be updated
+            setTimeout(async () => {
+              const userId = localStorage.getItem('user_id')
+              const botId = localStorage.getItem('bot_id')
+              alert(`Bot ID: ${botId || 'Not found'}, User ID: ${userId || 'Not found'}`)
+              
+              // Set the connected state and fetch databases
+              if (userId && botId) {
+                this.isConnected = true
+                const result = await this.fetchDatabases()
+                resolve(result)
+              } else {
+                resolve({ success: false })
+              }
+            }, 500)
+          }
+        }, 500)
+      })
     },
     
     // Check if user is already connected on mount
-    checkConnection(): void {
+    async checkConnection(): Promise<{ success: boolean; databases?: any[] }> {
       const userId = localStorage.getItem('user_id')
       const botId = localStorage.getItem('bot_id')
       console.log('User ID:', userId)
@@ -219,8 +234,9 @@ export const useNotionStore = defineStore('notion', {
       // If user is already connected, fetch their databases
       if (userId && botId) {
         this.isConnected = true
-        this.fetchDatabases()
+        return await this.fetchDatabases()
       }
+      return { success: false }
     }
   }
 })
