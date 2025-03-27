@@ -1,65 +1,45 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { useRequirementsStore } from '~/stores/requirements'
 
-// Props to receive from parent
-const props = defineProps({
-  showFormula: Boolean,
-  generatedFormula: String,
-  userInput: String,
-  isGenerated: Boolean
-})
-
-// Emits to send data back to parent
-const emit = defineEmits([
-  'update:userInput',
-  'update:generatedFormula',
-  'update:showFormula',
-  'toggleView'
-])
-
-// Computed property for the card title
-const cardTitle = computed(() => {
-  return props.showFormula ? 'Your Formula' : 'Describe your requirement'
-})
+// Use the requirements store
+const requirementsStore = useRequirementsStore()
 
 // Computed property for the text area content
 const textareaContent = computed({
   get: () => {
-    return props.showFormula ? props.generatedFormula : props.userInput
+    return requirementsStore.showFormula ? requirementsStore.generatedFormula : requirementsStore.userInput
   },
   set: (value) => {
-    if (props.showFormula) {
-      emit('update:generatedFormula', value)
+    if (requirementsStore.showFormula) {
+      requirementsStore.updateGeneratedFormula(value)
     } else {
-      emit('update:userInput', value)
+      requirementsStore.updateUserInput(value)
     }
   }
 })
-
-// Handle toggle view
-function handleToggleView(value) {
-  emit('toggleView')
-}
 </script>
 
 <template>
   <!-- Input/Formula Section -->
   <Card class="shadow-md h-full flex flex-col">
     <CardHeader class="flex flex-row items-center justify-between">
-      <CardTitle>{{ cardTitle }}</CardTitle>
-      <div v-if="props.isGenerated" class="flex items-center space-x-2">
-        <span class="text-sm text-gray-500">{{ props.showFormula ? 'Formula' : 'Description' }}</span>
-        <Switch v-model:checked="props.showFormula" @update:checked="handleToggleView" />
+      <CardTitle>{{ requirementsStore.cardTitle }}</CardTitle>
+      <div v-if="requirementsStore.isGenerated" class="flex items-center space-x-2">
+        <Label for="show-formula">Show Requirements</Label>
+        <Switch id="show-formula" :model-value="!requirementsStore.showFormula" @update:model-value="requirementsStore.toggleView" />
       </div>
     </CardHeader>
     <CardContent class="flex-1 flex flex-col">
       <Textarea 
-        v-model="textareaContent" 
-        :placeholder="props.showFormula ? 'Generated formula will appear here...' : 'Describe what you want your formula to do...'" 
+        :model-value="requirementsStore.showFormula ? requirementsStore.generatedFormula : requirementsStore.userInput" 
+        :placeholder="requirementsStore.showFormula ? 'Generated formula will appear here...' : 'Describe what you want your formula to do...'" 
         class="flex-1" 
-        :readonly="props.showFormula && props.generatedFormula" 
+        :readonly="requirementsStore.showFormula && requirementsStore.generatedFormula" 
       />
     </CardContent>
   </Card>

@@ -1,8 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', 'shadcn-nuxt'],
+  devtools: { enabled: false },
+  modules: ['@nuxtjs/tailwindcss', 'shadcn-nuxt', '@pinia/nuxt'],
   shadcn: {
     /**
      * Prefix for all the imported component
@@ -18,10 +18,10 @@ export default defineNuxtConfig({
     // Server-side environment variables
     notionClientId: process.env.NOTION_CLIENT_ID,
     notionClientSecret: process.env.NOTION_CLIENT_SECRET,
-	notionRedirectUri: process.env.NOTION_REDIRECT_URI,
-	groqApiKey: process.env.GROQ_API_KEY,
+    notionRedirectUri: process.env.NOTION_REDIRECT_URI,
+    groqApiKey: process.env.GROQ_API_KEY,
     
-	// Keys within public are also exposed client-side
+    // Keys within public are also exposed client-side
     public: {
         supabaseUrl: process.env.SUPABASE_URL,
         supabaseAnonKey: process.env.SUPABASE_KEY,
